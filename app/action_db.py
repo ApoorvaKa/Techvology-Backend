@@ -1,14 +1,12 @@
-from flask import Flask, request
+from app import app
+from flask import request
 from flask_sqlalchemy import SQLAlchemy
 
 from datetime import datetime
 from flask_cors import CORS
-
-app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:pass4now@localhost/techvology'
+
 db = SQLAlchemy(app)
-CORS(app)
-cors = CORS(app, resources={r"/api": {"origins": "http://localhost:3000"}})
 
 class Action(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +72,3 @@ def delete_action(id):
     db.session.delete(action)
     db.session.commit()
     return {"message": "Action deleted successfully"}
-
-if __name__ == '__main__':
-    app.run()
