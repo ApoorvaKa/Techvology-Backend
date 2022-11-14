@@ -47,7 +47,7 @@ def create_action():
 # get all events from the database
 @app.route('/actions', methods=['GET'])
 def get_actions():
-    actions = Action.query.order_by(Action.id.asc()).all() 
+    actions = Action.query.order_by(Action.id.desc()).all() 
     return {'actions': [format_action(action) for action in actions]}
 
 # get a single event from the database
