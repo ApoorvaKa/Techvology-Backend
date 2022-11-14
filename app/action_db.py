@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from datetime import datetime, timezone, timedelta
 from flask_cors import CORS
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost/techvology'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:pass4now@localhost/techvology'
 
 db = SQLAlchemy(app)
 
@@ -88,6 +88,20 @@ def delete_action(id):
 #     db.session.commit()
 #     return format_action(action)
 
+class WeeklyAverage():
+    def __init__(self, week, avg_carbon_output):
+        self.week = week
+        self.avg_carbon_output = avg_carbon_output
+    
+    def __repr__(self):
+        return f"Week: {self.week}, Average Carbon Output: {self.avg_carbon_output}"
+
+def format_weekly_average(weekly_average):
+    return{
+        'week': weekly_average.week,
+        'avg_carbon_output': weekly_average.avg_carbon_output
+    }
+
 # get weekly averages
 @app.route('/weeklyAverages', methods=['GET'])
 def weekly_averages():
@@ -97,7 +111,7 @@ def weekly_averages():
     sunday = actions[0].created_at - timedelta(days=sun_offset)
     weeks = abs(sunday-today).days//7 + 1
 
-    averages = {}
+    averages = []
     index = 0
     for _ in range(weeks):
         next_sun = sunday + timedelta(days=7)
@@ -115,9 +129,12 @@ def weekly_averages():
         
         total /= 7
 
-        key = str(sunday.year) + '/' + str(sunday.month) + '/' + str(sunday.day)
-        averages[key] = round(total, 2)
+        week = str(sunday.year) + '/' + str(sunday.month) + '/' + str(sunday.day)
+        avg = round(total, 2)
+        weekly_average = WeeklyAverage(week, avg)
+        formatted = format_weekly_average(weekly_average)
+        averages.append(formatted)
         sunday = next_sun
 
-    return json.dumps(averages)
+    return averages
 
