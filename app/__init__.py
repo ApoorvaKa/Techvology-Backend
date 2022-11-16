@@ -6,4 +6,4 @@ app = Flask(__name__)
 CORS(app)
 cors = CORS(app, resources={r"/api": {"origins": "http://localhost:3000"}})
 
-from app import action_db
+from app import login, action_db
