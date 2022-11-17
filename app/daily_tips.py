@@ -50,6 +50,6 @@ def populate_db():
 @app.route('/daily_tips', methods=['GET'])
 def get_daily_tip():
     daily_tips = DailyTip.query.all()
-    tips_list = [format_daily_tip(daily_tip) for daily_tip in daily_tips]
+    tips_list = [daily_tip for daily_tip in daily_tips]
     random_tip = random.choice(tips_list)
-    return {"daily_tip": random_tip}
+    return format_daily_tip(random_tip)
