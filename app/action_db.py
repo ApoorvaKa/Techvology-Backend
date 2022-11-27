@@ -1,23 +1,69 @@
 import json
 from app import app
 from flask import request
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, session
 
 from datetime import datetime, timezone, timedelta
 from flask_cors import CORS
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:pass4now@localhost/techvology'
+from hashlib import sha3_256
 
 db = SQLAlchemy(app)
+
+class task(db.types.UserDefinedType):
+    title = db.Column(db.String(100), nullable=False)
+    carbon_output = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+
+    def __init__(self, title='', carbon_output=0):
+        self.title = title
+        self.carbon_output = carbon_output
+
+    def __repr__(self):
+        return f"title: {self.title}, Carbon Output: {self.carbon_output}"
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    score = db.Column(db.Integer)
+    actions = db.relationship('Action', backref='user', lazy=True)
+
+    def __init__(self, username, passhash):
+        self.username = username
+        self.password = passhash
+        self.score = 0
+    
+    def __repr__(self):
+        return self.username
+
+def format_user(user):
+    return{
+        'id': user.id,
+        'username': user.username,
+        'password': user.password,
+        'score': user.score,
+    }
+
+def format_task(task):
+    return{
+        'title': task.title,
+        'carbon_output': task.carbon_output,
+        'created_at': task.created_at
+    }
 
 class Action(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     carbon_output = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def __init__(self, title, carbon_output):
         self.title = title
         self.carbon_output = carbon_output
+        # user id from session
+        self.user_id = login.session['user_id']
     
     def __repr__(self):
         return f"title: {self.title}, Carbon Output: {self.carbon_output}"
@@ -27,7 +73,8 @@ def format_action(action):
         'id': action.id,
         'title': action.title,
         'carbon_output': action.carbon_output,
-        'created_at': action.created_at
+        'created_at': action.created_at,
+        'user_id': action.user_id
     }
 
 @app.route('/')
@@ -47,7 +94,8 @@ def create_action():
 # get all events from the database
 @app.route('/actions', methods=['GET'])
 def get_actions():
-    actions = Action.query.order_by(Action.id.desc()).all() 
+    sessionuserid = db.session.query(User).first().id
+    actions = Action.query.filter_by(user_id=sessionuserid).order_by(Action.id.desc()).all() 
     return {'actions': [format_action(action) for action in actions]}
 
 # get a single event from the database
@@ -105,7 +153,8 @@ def format_weekly_average(weekly_average):
 # get weekly averages
 @app.route('/weeklyAverages', methods=['GET'])
 def weekly_averages():
-    actions = Action.query.order_by(Action.created_at.asc()).all()
+    sessionuserid = db.session.query(User).first().id
+    actions = Action.query.filter_by(user_id=sessionuserid).order_by(Action.id.desc()).all()
     today = datetime.now()
     sun_offset = (actions[0].created_at.weekday() - 6) % 7
     sunday = actions[0].created_at - timedelta(days=sun_offset)
@@ -138,3 +187,45 @@ def weekly_averages():
 
     return averages
 
+# attempts to authenticate the user in the database
+@app.route('/login/register', methods=['POST'])
+def register():
+    data = request.json['body']
+    username = data['username']
+    password = data['password']
+    hashed_password = sha3_256(password.encode('utf-8')).hexdigest()
+    user = User(username, hashed_password)
+    db.session.add(user)
+    db.session.commit()
+    if user:
+        return {'message': 'success'}
+    else:
+        return {'message': 'failure'}
+
+# attempts to authenticate the user
+@app.route('/login', methods=['POST'])
+def login():
+    db.session.close()
+    data = request.json['body']
+    username = data['username']
+    password = data['password']
+    user = User.query.filter_by(username=username).first()
+    if user:
+        passworddata = user.password
+        if(password == passworddata):
+            session = True
+            
+            db.session.add(user)
+            db.session.commit()
+            print(login)
+            return {'message': 'success', 'loginSuccess': True}
+        #verify password
+        if sha3_256(password.encode('utf-8')).hexdigest() == user.password:
+            session=True
+            
+            db.session.add(user)
+            db.session.commit()
+            return {'message': user.username}
+    else:
+        session = False
+        return {'message': 'error', 'loginSuccess': False}
