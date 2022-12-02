@@ -62,14 +62,37 @@ def get_user_username(username):
 @app.route('/user/<int:id>', methods=['PUT'])
 def update_user(id):
     user = User.query.filter_by(id=id).one()
-    user.actionLog = request.json['actionLog'];
+    user.actionLog = request.json['actionLog']
+    user.actionDates = request.json['actionDates']
+    user.score = request.json['score']
     db.session.commit()
     return {"message": "User updated successfully"}
+
+@app.route('/userActions/<int:id>/<int:actionIndex>', methods=['PUT'])
+def delete_action_and_date(id, actionIndex):
+    user = db.session.query(User).filter_by(id=id).one()
+    tempLog = user.actionLog
+    print(user.actionLog)
+    del tempLog[actionIndex]
+    user.actionLog = tempLog
+    print(user.actionLog)
+    tempDate = user.actionDates
+    del tempDate[actionIndex]
+    user.actionDate = tempDate
+    db.session.commit()
+    return {"message": "Action and date deleted successfully" + user.actionLog}
 
 @app.route('/userlog/<int:id>', methods=['DELETE'])
 def delete_log(id):
     user = User.query.filter_by(id=id).one()
-    user.actionLog = [];
+    user.actionLog = []
+    db.session.commit()
+    return {"message": "Userlog deleted successfully"}
+
+@app.route('/userlogdates/<int:id>', methods=['DELETE'])
+def delete_dates(id):
+    user = User.query.filter_by(id=id).one()
+    user.actionDates = [];
     db.session.commit()
     return {"message": "Userlog deleted successfully"}
 
