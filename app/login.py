@@ -166,6 +166,29 @@ def add_action():
     db.session.commit()
     return actions
 
+# add an action to the logged in user's action log
+@app.route('/log_action_week_before/<int:amount>', methods=['POST'])
+@jwt_required()
+def add_action_test(amount):
+    action_id = request.json['action_id']
+    title = request.json['title']
+    carbon_output = request.json['carbon_output']
+    timestamp_init = datetime.now(timezone.utc)
+    timestamp = timestamp_init - timedelta(weeks = amount)
+    timestamp = timestamp.strftime("%d/%m/%Y %H:%M:%S")
+    user = db.session.query(User).filter_by(username=get_jwt_identity()).first()
+    if not user:
+        return {'message': 'User not found'}
+    actions = copy.deepcopy(user.actionLog)
+    newAction = UserAction(action_id, title, carbon_output, timestamp)
+    formattedAction = format_user_action(newAction)
+    actions.append(str(formattedAction))
+    user.score = user.score + int(carbon_output)
+    db.session.commit()
+    user.actionLog = actions
+    db.session.commit()
+    return actions
+
 @app.route('/del_logged_action/<int:index>', methods=['DELETE'])
 @jwt_required()
 def remove_action_from_log(index):
@@ -196,3 +219,69 @@ def clear_user_actions():
         user.actionLog = []
     db.session.commit()
     return "Set all action logs to blank"
+
+# ------ WEEKLY AVERAGE FUNCTIONALITY -----
+class WeeklyAverage():
+     def __init__(self, week, avg_carbon_output):
+         self.week = week
+         self.avg_carbon_output = avg_carbon_output
+    
+     def __repr__(self):
+         return f"Week: {self.week}, Average Carbon Output: {self.avg_carbon_output}"
+
+def format_weekly_average(weekly_average):
+     return{
+         'week': weekly_average.week,
+         'avg_carbon_output': weekly_average.avg_carbon_output
+     }
+
+#  get weekly averages
+@app.route('/weeklyAverages', methods=['GET'])
+@jwt_required()
+def weekly_averages():
+     userActions = get_log()
+     today = datetime.now()
+     action_date_str = userActions[0]['timestamp']
+     action_date_str = action_date_str[0:10]
+     action_date_format = "%d/%m/%Y"
+     action_date = datetime.strptime(action_date_str, action_date_format)
+     sun_offset = (action_date.weekday() - 6) % 7
+     sunday = action_date - timedelta(days=sun_offset)
+     weeks = abs(sunday-today).days//7 + 1
+
+     averages = []
+     index = 0
+
+     action_convert = []
+     for idx in range(len(userActions)):
+         action_date_str = userActions[idx]['timestamp']
+         action_date_str = action_date_str[0:10]
+         action_date_format = "%d/%m/%Y"
+         action_date = datetime.strptime(action_date_str, action_date_format)
+         action_convert.append(action_date)
+     print(action_convert)
+
+     for _ in range(weeks):
+         next_sun = sunday + timedelta(days=7)
+         total = 0
+         not_same = True
+        
+         while action_convert[index] < next_sun and index != -1 and not_same:
+             if action_convert[index].month == next_sun.month and action_convert[index].day == next_sun.day:
+                 not_same = False
+             else: 
+                 total += int(userActions[index]['carbon_output'])
+                 index += 1
+                 if index == len(userActions):
+                     index = -1
+        
+         total /= 7
+
+         week = str(sunday.year) + '/' + str(sunday.month) + '/' + str(sunday.day)
+         avg = round(total, 2)
+         weekly_average = WeeklyAverage(week, avg)
+         formatted = format_weekly_average(weekly_average)
+         averages.append(formatted)
+         sunday = next_sun
+
+     return averages

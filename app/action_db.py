@@ -107,7 +107,7 @@ def delete_action(id):
 
 
 ## ------ WEEKLY AVERAGE FUNCTIONALITY -----
-# class WeeklyAverage():
+#class WeeklyAverage():
 #     def __init__(self, week, avg_carbon_output):
 #         self.week = week
 #         self.avg_carbon_output = avg_carbon_output
@@ -115,15 +115,16 @@ def delete_action(id):
 #     def __repr__(self):
 #         return f"Week: {self.week}, Average Carbon Output: {self.avg_carbon_output}"
 
-# def format_weekly_average(weekly_average):
+#def format_weekly_average(weekly_average):
 #     return{
 #         'week': weekly_average.week,
 #         'avg_carbon_output': weekly_average.avg_carbon_output
 #     }
 
-# # get weekly averages
-# @app.route('/weeklyAverages', methods=['GET'])
-# def weekly_averages():
+##  get weekly averages
+#@app.route('/weeklyAverages', methods=['GET'])
+#@jwt_required()
+#def weekly_averages():
 #     actions = Action.query.order_by(Action.created_at.asc()).all()
 #     today = datetime.now()
 #     sun_offset = (actions[0].created_at.weekday() - 6) % 7
