@@ -110,12 +110,13 @@ def login():
     access_token = create_access_token(identity=username)
     return {'access_token': access_token}
 
-# hello world with authorization test only
+# hello world with authorization TEST only
 @app.route('/hello-world', methods=['GET'])
 @jwt_required()
 def hello_world():
     return {'message': 'Hello World'}
 
+# get leaderboard content
 @app.route('/leaderboard', methods=['GET'])
 def get_leaderboard_content():
     users = User.query.order_by(User.id.desc()).all() 
@@ -132,6 +133,7 @@ def get_user():
         return {'message': 'User not found'}
     return format_user(user)
 
+# get users action log
 @app.route('/get_log', methods=['GET'])
 @jwt_required()
 def get_log():
