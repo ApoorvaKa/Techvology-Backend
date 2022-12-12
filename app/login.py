@@ -92,10 +92,14 @@ def register():
     username = request.json['username']
     password = request.json['password']
     passhash = sha3_256(password.encode('utf-8')).hexdigest()
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return {'message': 'Username is taken'}
     user = User(username, passhash)
     db.session.add(user)
     db.session.commit()
-    return {'message': 'User created'}
+    access_token = create_access_token(identity=username)
+    return {'access_token': access_token}
 
 # login a user
 @app.route('/login', methods=['POST'])
@@ -111,15 +115,16 @@ def login():
     access_token = create_access_token(identity=username)
     return {'access_token': access_token}
 
-# hello world with authorization test only
+# hello world with authorization TEST only
 @app.route('/hello-world', methods=['GET'])
 @jwt_required()
 def hello_world():
     return {'message': 'Hello World'}
 
+# get leaderboard content
 @app.route('/leaderboard', methods=['GET'])
 def get_leaderboard_content():
-    users = User.query.order_by(User.id.desc()).all() 
+    users = User.query.order_by(User.score.asc()).all() 
     formUsers = {'users': [format_user(user) for user in users]}
     newUsers = [i for i in formUsers['users'] if not (i['score'] == 0)]
     newUsers.sort(key=operator.itemgetter('score'))
@@ -134,6 +139,7 @@ def get_user():
         return {'message': 'User not found'}
     return format_user(user)
 
+# get users action log
 @app.route('/get_log', methods=['GET'])
 @jwt_required()
 def get_log():
