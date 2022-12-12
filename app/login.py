@@ -1,4 +1,5 @@
 # from asyncio.windows_events import NULL
+import operator
 from app import app
 from flask import request, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
@@ -121,6 +122,7 @@ def get_leaderboard_content():
     users = User.query.order_by(User.id.desc()).all() 
     formUsers = {'users': [format_user(user) for user in users]}
     newUsers = [i for i in formUsers['users'] if not (i['score'] == 0)]
+    newUsers.sort(key=operator.itemgetter('score'))
     return {'users': [format_user_leaderboard(user) for user in newUsers]}
 
 # get user information
