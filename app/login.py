@@ -91,10 +91,14 @@ def register():
     username = request.json['username']
     password = request.json['password']
     passhash = sha3_256(password.encode('utf-8')).hexdigest()
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return {'message': 'Username is taken'}
     user = User(username, passhash)
     db.session.add(user)
     db.session.commit()
-    return {'message': 'User created'}
+    access_token = create_access_token(identity=username)
+    return {'access_token': access_token}
 
 # login a user
 @app.route('/login', methods=['POST'])
@@ -119,7 +123,7 @@ def hello_world():
 # get leaderboard content
 @app.route('/leaderboard', methods=['GET'])
 def get_leaderboard_content():
-    users = User.query.order_by(User.id.desc()).all() 
+    users = User.query.order_by(User.score.asc()).all() 
     formUsers = {'users': [format_user(user) for user in users]}
     newUsers = [i for i in formUsers['users'] if not (i['score'] == 0)]
     return {'users': [format_user_leaderboard(user) for user in newUsers]}
